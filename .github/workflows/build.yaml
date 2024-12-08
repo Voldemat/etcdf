@@ -11,6 +11,8 @@ jobs:
     - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
         packages: libc++-18-dev clang-18 uuid-dev
+    - name: Purge gcc
+      run: apt-get purge gcc
     - name: Cache Build
       id: restore-cache-build
       uses: actions/cache/restore@v4
@@ -20,7 +22,7 @@ jobs:
     - name: CMake Action
       uses: threeal/cmake-action@v1.3.0
       with:
-        args: -DCMAKE_BUILD_TYPE=Release -DETCDF_BUILD_TESTS=true -DCMAKE_CXX_FLAGS='-D__cpp_concepts=202002L' -DCXX_FILESYSTEM_HAVE_FS=TRUE -DCMAKE_EXE_LINKER_FLAGS='-static'
+        args: -DCMAKE_BUILD_TYPE=Release -DETCDF_BUILD_TESTS=true -DCMAKE_CXX_FLAGS='-D__cpp_concepts=202002L' -DCXX_FILESYSTEM_HAVE_FS=TRUE -DCMAKE_EXE_LINKER_FLAGS='-static -stdlib=libc++ -lc++abi'
         run-build: true
         c-compiler: clang-18
         cxx-compiler: clang++-18
