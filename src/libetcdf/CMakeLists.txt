@@ -9,10 +9,5 @@ add_library(
 )
 target_include_directories(
     libetcdf
-    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src/
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/
 )
-get_target_property(LIBB_INCLUDES libetcdf INCLUDE_DIRECTORIES)
-if (LIBETCDF_BUILD_TESTS)
-    #include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeTestLists.txt")
-endif()

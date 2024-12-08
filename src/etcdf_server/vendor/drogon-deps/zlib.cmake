@@ -1,7 +1,4 @@
 include(FetchContent)
-macro (install)
-
-endmacro ()
 FetchContent_Declare(
     ZLIB
     GIT_REPOSITORY https://github.com/madler/zlib
@@ -19,4 +16,3 @@ endif()
 FetchContent_GetProperties(ZLIB)
 add_library(ZLIB::ZLIB ALIAS zlibstatic)
 set(ZLIB_INCLUDE_DIRS "${zlib_SOURCE_DIR};${zlib_BINARY_DIR}")
-export(TARGETS zlibstatic FILE Findzlibstatic.cmake)

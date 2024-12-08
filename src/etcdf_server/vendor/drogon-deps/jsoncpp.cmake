@@ -15,5 +15,4 @@ FetchContent_Declare(
     OVERRIDE_FIND_PACKAGE
 )
 FetchContent_MakeAvailable(Jsoncpp)
-get_target_property(JSONCPP_INCLUDE_DIRECTORIES jsoncpp_static INCLUDE_DIRECTORIES)
-
+add_library(Jsoncpp_lib ALIAS jsoncpp_static)

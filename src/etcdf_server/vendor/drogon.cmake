@@ -15,5 +15,3 @@ FetchContent_Declare(
     GIT_TAG v1.9.8
 )
 FetchContent_MakeAvailable(drogon)
-target_include_directories(drogon PRIVATE ${JSONCPP_INCLUDE_DIRECTORIES})
-#target_link_libraries(drogon PRIVATE zlibstatic)
