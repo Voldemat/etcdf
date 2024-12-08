@@ -10,7 +10,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: libc++-18-dev clang-18
+        packages: libc++-18-dev clang-18 uuid-dev
     - name: Cache Build
       id: restore-cache-build
       uses: actions/cache/restore@v4
