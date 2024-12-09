@@ -7,6 +7,7 @@ add_library(
     libetcdf
     ${ETCDF_LIB_SOURCES}
 )
+set_property(TARGET libetcdf PROPERTY CXX_STANDARD 23)
 target_include_directories(
     libetcdf
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/

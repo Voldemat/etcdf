@@ -1,6 +1,5 @@
 include(FetchContent)
 include("${CMAKE_CURRENT_LIST_DIR}/drogon-deps/jsoncpp.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/drogon-deps/zlib.cmake")
 set(BUILD_CTL OFF CACHE INTERNAL "")
 set(BUILD_EXAMPLES OFF CACHE INTERNAL "")
 set(BUILD_ORM OFF CACHE INTERNAL "")

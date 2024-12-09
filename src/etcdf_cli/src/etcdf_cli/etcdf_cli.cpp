@@ -11,7 +11,7 @@
 
 #include "ipaddress/errors.hpp"
 #include "ipaddress/ip-any-address.hpp"
-#include "etcdf_server/server.hpp"
+#include "etcdf_server/v2-http/server.hpp"
 
 namespace etcdf::cli {
 auto host_validator = CLI::Validator(

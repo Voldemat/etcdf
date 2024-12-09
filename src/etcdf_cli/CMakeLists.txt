@@ -6,6 +6,7 @@ add_executable(
     src/main.cpp
     ${ETCDF_CLI_SOURCES}
 )
+set_property(TARGET etcdf PROPERTY CXX_STANDARD 23)
 target_link_libraries(etcdf
     PRIVATE CLI11::CLI11
     PRIVATE etcdfserver

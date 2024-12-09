@@ -5,7 +5,6 @@ include(GNUInstallDirs)
 include(CMakePrintHelpers)
 include(FetchContent)
 
-set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
