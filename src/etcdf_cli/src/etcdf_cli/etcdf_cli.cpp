@@ -9,9 +9,9 @@
 #include <optional>
 #include <string>
 
+#include "etcdf_server/launcher/launcher.hpp"
 #include "ipaddress/errors.hpp"
 #include "ipaddress/ip-any-address.hpp"
-#include "etcdf_server/v2-http/server.hpp"
 
 namespace etcdf::cli {
 auto host_validator = CLI::Validator(
@@ -34,17 +34,27 @@ auto port_validator = CLI::Validator(
     "", "port validator");
 std::unique_ptr<CLI::App> createCLIApp() noexcept {
     std::unique_ptr<CLI::App> app = std::make_unique<CLI::App>("Etcdf");
-    auto host = std::make_shared<std::string>();
-    app->add_option("-a,--address", *host, "Listening ip address")
+    auto http_host = std::make_shared<std::string>();
+    app->add_option("--http-address", *http_host, "Http listening ip address")
         ->required()
         ->transform(host_validator);
-    auto port = std::make_shared<unsigned short>();
-    app->add_option("-p,--port", *port, "Listening port")
+    auto http_port = std::make_shared<unsigned short>();
+    app->add_option("--http-port", *http_port, "Http listening port")
         ->required()
         ->transform(port_validator);
-    app->callback([host, port]() {
-        const auto &host_ip = ipaddress::ip_address::parse(*host);
-        etcdf::server::start_httpserver(host_ip, *port, std::nullopt);
+    auto grpc_host = std::make_shared<std::string>();
+    app->add_option("--grpc-address", *grpc_host, "gRPC listening ip address")
+        ->required()
+        ->transform(host_validator);
+    auto grpc_port = std::make_shared<unsigned short>();
+    app->add_option("--grpc-port", *grpc_port, "gRPC listening port")
+        ->required()
+        ->transform(port_validator);
+    app->callback([http_host, http_port, grpc_host, grpc_port]() {
+        const auto &http_host_ip = ipaddress::ip_address::parse(*http_host);
+        const auto &grpc_host_ip = ipaddress::ip_address::parse(*grpc_host);
+        etcdf::server::launcher::start_both_servers(
+            http_host_ip, *http_port, std::nullopt, grpc_host_ip, *grpc_port);
     });
     return app;
 };

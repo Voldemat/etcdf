@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+service Test {
+    rpc Put(PutRequest) returns (google.protobuf.Empty);
+};
+
+message PutRequest {
+    bytes key = 1;
+    bytes value = 2;
+    int64 lease = 3;
+}
