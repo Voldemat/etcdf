@@ -19,8 +19,6 @@ protobuf_generate(
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
     PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}"
 )
-get_target_property(CHECK etcdfproto INTERFACE_INCLUDE_DIRECTORIES)
-cmake_print_variables(CHECK)
 file(GLOB_RECURSE ETCDF_SERVER_HEADERS src/*.hpp src/*.h)
 file(GLOB_RECURSE ETCDF_SERVER_SOURCES src/*.cpp src/*.c)
 filter_items(ETCDF_SERVER_HEADERS ".*__tests__.*")
