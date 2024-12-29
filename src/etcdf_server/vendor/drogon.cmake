@@ -8,6 +8,7 @@ set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
 set(BUILD_DOC OFF CACHE INTERNAL "")
 set(BUILD_YAML_CONFIG OFF CACHE INTERNAL "")
 set(USE_STATIC_LIBS_ONLY ON CACHE INTERNAL "")
+set(BUILD_TESTING OFF CACHE INTERNAL "")
 FetchContent_Declare(
     drogon
     GIT_REPOSITORY https://github.com/drogonframework/drogon

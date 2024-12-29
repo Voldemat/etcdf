@@ -7,30 +7,53 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/sync_stream.h>
 
-#include <cstdint>
 #include <format>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "etcdf_server/shared/config.hpp"
 #include "etcdf_server/v3-grpc/services/auth/auth.hpp"
 #include "etcdf_server/v3-grpc/services/cluster/cluster.hpp"
 #include "etcdf_server/v3-grpc/services/kv/kv.hpp"
 #include "etcdf_server/v3-grpc/services/lease/lease.hpp"
 #include "etcdf_server/v3-grpc/services/maintenance/maintenance.hpp"
 #include "etcdf_server/v3-grpc/services/watch/watch.hpp"
+#include "libcxx-polyfills/concat_views.hpp"
 #include "ipaddress/ip-any-address.hpp"
 
 namespace etcdf::server::v3_grpc {
 
-void start_grpcserver(const ipaddress::ip_address &host, const uint16_t &port) {
+std::shared_ptr<grpc::ServerCredentials>
+tlsContextToSslServerCredentialsOptions(const shared::TLSContext &context) {
+    grpc::SslServerCredentialsOptions options;
+    std::ifstream privateKeyFile(context.privateKeyPath);
+    std::ifstream certFile(context.certPath);
+    std::ifstream caFile(context.caPath);
+    grpc::SslServerCredentialsOptions::PemKeyCertPair tlsPair = {
+        .private_key =
+            std::string(std::istreambuf_iterator<char>(privateKeyFile),
+                        std::istreambuf_iterator<char>()),
+        .cert_chain = std::string(std::istreambuf_iterator<char>(certFile),
+                                  std::istreambuf_iterator<char>())
+    };
+    options.pem_key_cert_pairs = { tlsPair };
+    options.pem_root_certs =
+        std::string(std::istreambuf_iterator<char>(certFile),
+                    std::istreambuf_iterator<char>());
+    return grpc::SslServerCredentials(options);
+};
+
+void start_grpcserver(const shared::Config &config) {
     GRPCKVService kvService;
     GRPCWatchService watchService;
     GRPCLeaseService leaseService;
     GRPCMaintenanceService maintenanceService;
     GRPCAuthService authService;
     GRPCClusterService clusterService;
-    std::string address = std::format("{}:{}", host.to_string(), port);
     grpc::ServerBuilder builder;
     builder.RegisterService(&kvService);
     builder.RegisterService(&watchService);
@@ -38,9 +61,21 @@ void start_grpcserver(const ipaddress::ip_address &host, const uint16_t &port) {
     builder.RegisterService(&maintenanceService);
     builder.RegisterService(&authService);
     builder.RegisterService(&clusterService);
-    builder.AddListeningPort(address, grpc::InsecureServerCredentials());
+    for (const auto &listener : std::views::concat(
+             config.listeners.peers.grpc, config.listeners.clients.grpc)) {
+        grpc::SslServerCredentialsOptions options;
+        std::shared_ptr<grpc::ServerCredentials> creds =
+            listener.tlsContext.has_value()
+                ? tlsContextToSslServerCredentialsOptions(
+                      listener.tlsContext.value())
+                : grpc::InsecureServerCredentials();
+        builder.AddListeningPort(
+            std::format("{}:{}", listener.ip_address.to_string(),
+                        listener.port),
+            creds);
+    };
     const auto &server = builder.BuildAndStart();
-    std::cout << "Server listening on " << address << std::endl;
+    std::cout << "Server started" << std::endl;
     server->Wait();
 };
 };  // namespace etcdf::server::v3_grpc
