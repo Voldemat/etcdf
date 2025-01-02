@@ -23,7 +23,6 @@
 #include "etcdf_server/v3-grpc/services/maintenance/maintenance.hpp"
 #include "etcdf_server/v3-grpc/services/watch/watch.hpp"
 #include "libcxx-polyfills/concat_views.hpp"
-#include "ipaddress/ip-any-address.hpp"
 
 namespace etcdf::server::v3_grpc {
 
@@ -32,7 +31,6 @@ tlsContextToSslServerCredentialsOptions(const shared::TLSContext &context) {
     grpc::SslServerCredentialsOptions options;
     std::ifstream privateKeyFile(context.privateKeyPath);
     std::ifstream certFile(context.certPath);
-    std::ifstream caFile(context.caPath);
     grpc::SslServerCredentialsOptions::PemKeyCertPair tlsPair = {
         .private_key =
             std::string(std::istreambuf_iterator<char>(privateKeyFile),
@@ -41,9 +39,12 @@ tlsContextToSslServerCredentialsOptions(const shared::TLSContext &context) {
                                   std::istreambuf_iterator<char>())
     };
     options.pem_key_cert_pairs = { tlsPair };
-    options.pem_root_certs =
-        std::string(std::istreambuf_iterator<char>(certFile),
-                    std::istreambuf_iterator<char>());
+    if (context.caPath.has_value()) {
+        std::ifstream caFile(context.caPath.value());
+        options.pem_root_certs =
+            std::string(std::istreambuf_iterator<char>(caFile),
+                        std::istreambuf_iterator<char>());
+    };
     return grpc::SslServerCredentials(options);
 };
 
@@ -69,13 +70,12 @@ void start_grpcserver(const shared::Config &config) {
                 ? tlsContextToSslServerCredentialsOptions(
                       listener.tlsContext.value())
                 : grpc::InsecureServerCredentials();
-        builder.AddListeningPort(
-            std::format("{}:{}", listener.ip_address.to_string(),
-                        listener.port),
-            creds);
+        const auto &listenAddr = std::format(
+            "{}:{}", listener.ip_address.to_string(), listener.port);
+        builder.AddListeningPort(listenAddr, creds);
+        std::cout << "Server listening on: " << listenAddr << std::endl;
     };
     const auto &server = builder.BuildAndStart();
-    std::cout << "Server started" << std::endl;
     server->Wait();
 };
 };  // namespace etcdf::server::v3_grpc

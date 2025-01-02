@@ -33,9 +33,16 @@ set_property(TARGET etcdfserver PROPERTY CXX_STANDARD 23)
 target_link_libraries(
     etcdfserver
     PUBLIC ipaddress::ipaddress
-    PRIVATE etcdfproto drogon jsoncpp_static libcxx_polyfills
+    PRIVATE etcdfproto drogon jsoncpp_static etcdf_utils
 )
 target_include_directories(
     etcdfserver
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/
+)
+target_include_directories(
+    etcdfserver
+    SYSTEM
+    PRIVATE $<TARGET_PROPERTY:drogon,INTERFACE_INCLUDE_DIRECTORIES>
+    PRIVATE $<TARGET_PROPERTY:jsoncpp_static,INTERFACE_INCLUDE_DIRECTORIES>
+    PUBLIC $<TARGET_PROPERTY:ipaddress::ipaddress,INTERFACE_INCLUDE_DIRECTORIES>
 )

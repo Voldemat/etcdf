@@ -1,5 +1,6 @@
 include("${CMAKE_CURRENT_SOURCE_DIR}/vendor/cli11.cmake")
 include("${CMAKE_CURRENT_SOURCE_DIR}/vendor/yamlcpp.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/vendor/cxxurl.cmake")
 
 file(GLOB_RECURSE ETCDF_CLI_SOURCES src/*.cpp src/*.c)
 set(
@@ -35,6 +36,8 @@ target_link_libraries(etcdf
     PRIVATE CLI11::CLI11
     PRIVATE etcdfserver
     PRIVATE yaml-cpp::yaml-cpp
+    PRIVATE etcdf_utils
+    PRIVATE chmike::CxxUrl
 )
 target_include_directories(
     etcdf
@@ -46,5 +49,3 @@ target_include_directories(
     PRIVATE ${CLI11_INCLUDE_DIR}
     PRIVATE $<TARGET_PROPERTY:yaml-cpp::yaml-cpp,INTERFACE_INCLUDE_DIRECTORIES>
 )
-get_target_property(CHECK etcdf INCLUDE_DIRECTORIES)
-cmake_print_variables(CHECK)

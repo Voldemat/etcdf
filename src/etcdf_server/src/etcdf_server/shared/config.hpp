@@ -1,16 +1,14 @@
 #pragma once
 
 #include <filesystem>
+#include <ipaddress/ip-any-address.hpp>
 #include <optional>
 #include <string>
-#include <tuple>
 #include <vector>
-
-#include "ipaddress/ip-any-address.hpp"
 
 namespace etcdf::server::shared {
 struct TLSContext {
-    std::filesystem::path caPath;
+    std::optional<std::filesystem::path> caPath;
     std::filesystem::path certPath;
     std::filesystem::path privateKeyPath;
 };
@@ -22,7 +20,12 @@ struct Endpoint {
     unsigned int port;
     std::optional<TLSContext> tlsContext;
 };
-using AdvertisedEndpoint = std::tuple<std::string, unsigned int, EtcdfProtocol>;
+
+struct AdvertisedEndpoint {
+    std::string host;
+    std::optional<unsigned int> port;
+    EtcdfProtocol protocol;
+};
 
 struct GrpcAndHttpListeners {
     std::vector<Endpoint> grpc;
@@ -36,5 +39,6 @@ struct Config {
         std::vector<AdvertisedEndpoint> advertisedToPeers;
         std::vector<AdvertisedEndpoint> advertisedToClients;
     } listeners;
+    std::filesystem::path dataDirPath;
 };
 };  // namespace etcdf::server::shared
