@@ -30,7 +30,6 @@ jobs:
           CMAKE_BUILD_TYPE=Release
           ETCDF_BUILD_TESTS=true
           CMAKE_CXX_FLAGS='-D__cpp_concepts=202002L'
-          CXX_FILESYSTEM_HAVE_FS=TRUE
           CMAKE_EXE_LINKER_FLAGS='-static'
         run-build: true
         c-compiler: clang-19
