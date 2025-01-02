@@ -10,7 +10,11 @@ jobs:
     - uses: actions/checkout@v3
     - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: libc++-18-dev clang-18 uuid-dev
+        packages: uuid-dev
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: "18.1.8"
     - name: Purge gcc
       run: sudo apt-get purge gcc
     - name: Cache Build
