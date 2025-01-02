@@ -16,6 +16,7 @@
 #include <cstring>
 #include <format>
 #include <fstream>
+#include <iostream>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
@@ -123,24 +124,31 @@ etcdf::server::shared::Config config_from_file(std::ifstream &file) {
         std::ranges::to<std::vector>();
     const auto &clientUrls = node["listen-client-urls"].as<std::string>();
 
-    for (const auto &[protocol, endpoint] :
+    for (const auto &[protocol, endpoints] :
          split(clientUrls, ",") |
              std::views::transform(transform_convert<Url>) |
              std::views::transform(
-                 [](const Url &url) -> std::pair<server::shared::EtcdfProtocol,
-                                                 server::shared::Endpoint> {
-                     return { schemeToProtocol(url.scheme()),
-                              (server::shared::Endpoint){
-                                  .ip_address = hostToIps(url.host()).front(),
-                                  .port = parsePort(url.port()).value() } };
+                 [](const Url &url)
+                     -> std::pair<server::shared::EtcdfProtocol,
+                                  std::vector<server::shared::Endpoint>> {
+                     const auto &port = parsePort(url.port());
+                     const auto &endpoints =
+                         hostToIps(url.host()) |
+                         std::views::transform([&port](const auto &ip)
+                                                   -> server::shared::Endpoint {
+                             return { .ip_address = ip, .port = port.value() };
+                         }) |
+                         std::ranges::to<std::vector>();
+                     return { schemeToProtocol(url.scheme()), endpoints };
                  })) {
+        std::cout << std::format("{}: {}", (int)protocol, endpoints.size()) << std::endl;
         switch (protocol) {
             case server::shared::EtcdfProtocol::GRPC: {
-                config.listeners.clients.grpc.push_back(endpoint);
+                config.listeners.clients.grpc.append_range(endpoints);
                 break;
             }
             case server::shared::EtcdfProtocol::HTTP: {
-                config.listeners.clients.http.push_back(endpoint);
+                config.listeners.clients.http.append_range(endpoints);
                 break;
             }
         };

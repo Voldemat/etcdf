@@ -10,6 +10,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <ipaddress/ip-address-base.hpp>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -48,6 +49,19 @@ tlsContextToSslServerCredentialsOptions(const shared::TLSContext &context) {
     return grpc::SslServerCredentials(options);
 };
 
+std::string listenAddrFromEndpoint(const shared::Endpoint& endpoint) {
+    switch (endpoint.ip_address.version()) {
+        case ipaddress::ip_version::V4: {
+        return std::format(
+            "{}:{}", endpoint.ip_address.to_string(), endpoint.port);
+        }
+        case ipaddress::ip_version::V6: {
+        return std::format(
+            "[{}]:{}", endpoint.ip_address.to_string(), endpoint.port);
+        }
+    };
+};
+
 void start_grpcserver(const shared::Config &config) {
     GRPCKVService kvService;
     GRPCWatchService watchService;
@@ -70,8 +84,7 @@ void start_grpcserver(const shared::Config &config) {
                 ? tlsContextToSslServerCredentialsOptions(
                       listener.tlsContext.value())
                 : grpc::InsecureServerCredentials();
-        const auto &listenAddr = std::format(
-            "{}:{}", listener.ip_address.to_string(), listener.port);
+        const auto& listenAddr = listenAddrFromEndpoint(listener);
         builder.AddListeningPort(listenAddr, creds);
         std::cout << "Server listening on: " << listenAddr << std::endl;
     };
