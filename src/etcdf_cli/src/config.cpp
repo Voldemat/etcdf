@@ -1,7 +1,5 @@
 #include "./config.hpp"
 
-#include <__ranges/chunk_by_view.h>
-#include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/_endian.h>
@@ -17,22 +15,22 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <ipaddress/errors.hpp>
+#include <ipaddress/ip-any-address.hpp>
+#include <ipaddress/ipv4-address.hpp>
+#include <ipaddress/ipv6-address.hpp>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <url.hpp>
 #include <utility>
 #include <vector>
 
 #include "etcdf_server/shared/config.hpp"
-#include "ipaddress/errors.hpp"
-#include "ipaddress/ip-any-address.hpp"
-#include "ipaddress/ipv4-address.hpp"
-#include "ipaddress/ipv6-address.hpp"
 #include "shared-utils/addrinfo_iterator.hpp"
 #include "shared-utils/string_split.hpp"
 #include "shared-utils/transform_utils.hpp"
-#include "url.hpp"
 
 namespace etcdf::cli::config {
 
@@ -141,7 +139,8 @@ etcdf::server::shared::Config config_from_file(std::ifstream &file) {
                          std::ranges::to<std::vector>();
                      return { schemeToProtocol(url.scheme()), endpoints };
                  })) {
-        std::cout << std::format("{}: {}", (int)protocol, endpoints.size()) << std::endl;
+        std::cout << std::format("{}: {}", (int)protocol, endpoints.size())
+                  << std::endl;
         switch (protocol) {
             case server::shared::EtcdfProtocol::GRPC: {
                 config.listeners.clients.grpc.append_range(endpoints);
