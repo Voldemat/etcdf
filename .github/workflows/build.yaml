@@ -16,7 +16,7 @@ jobs:
       with:
         packages: uuid-dev clang-19 libcxx-19 cmake
     - name: Purge gcc
-      run: sudo apt-get purge gcc
+      run: sudo apt-get purge -y gcc
     - name: Cache Build
       id: restore-cache-build
       uses: actions/cache/restore@v4
