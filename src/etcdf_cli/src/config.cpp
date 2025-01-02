@@ -14,7 +14,6 @@
 #include <cstring>
 #include <format>
 #include <fstream>
-#include <iostream>
 #include <ipaddress/errors.hpp>
 #include <ipaddress/ip-any-address.hpp>
 #include <ipaddress/ipv4-address.hpp>
@@ -139,8 +138,6 @@ etcdf::server::shared::Config config_from_file(std::ifstream &file) {
                          std::ranges::to<std::vector>();
                      return { schemeToProtocol(url.scheme()), endpoints };
                  })) {
-        std::cout << std::format("{}: {}", (int)protocol, endpoints.size())
-                  << std::endl;
         switch (protocol) {
             case server::shared::EtcdfProtocol::GRPC: {
                 config.listeners.clients.grpc.append_range(endpoints);

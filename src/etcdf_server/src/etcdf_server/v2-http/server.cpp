@@ -18,6 +18,5 @@ void start_httpserver(const shared::Config &config) {
                     .addListener(host, port);
     app.run();
     app.quit();
-    std::cout << "start_httpserver ended" << std::endl;
 };
 };  // namespace etcdf::server::v2_http
