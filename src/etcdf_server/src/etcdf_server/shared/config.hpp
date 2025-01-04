@@ -2,8 +2,10 @@
 
 #include <filesystem>
 #include <ipaddress/ip-any-address.hpp>
+#include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace etcdf::server::shared {
@@ -13,32 +15,18 @@ struct TLSContext {
     std::filesystem::path privateKeyPath;
 };
 
-enum class EtcdfProtocol { HTTP, GRPC };
-
 struct Endpoint {
-    ipaddress::ip_address ip_address;
+    ipaddress::ip_address ipAddress;
     unsigned int port;
-    std::optional<TLSContext> tlsContext;
-};
-
-struct AdvertisedEndpoint {
-    std::string host;
-    std::optional<unsigned int> port;
-    EtcdfProtocol protocol;
-};
-
-struct GrpcAndHttpListeners {
-    std::vector<Endpoint> grpc;
-    std::vector<Endpoint> http;
+    std::optional<std::shared_ptr<TLSContext>> tlsContext;
 };
 
 struct Config {
-    struct Listeners {
-        GrpcAndHttpListeners peers;
-        GrpcAndHttpListeners clients;
-        std::vector<AdvertisedEndpoint> advertisedToPeers;
-        std::vector<AdvertisedEndpoint> advertisedToClients;
-    } listeners;
+    struct Endpoints {
+        std::vector<Endpoint> http;
+        std::vector<Endpoint> grpc;
+    } endpoints;
+    std::unordered_map<std::string, std::shared_ptr<TLSContext>> tlsContexts;
     std::filesystem::path dataDirPath;
 };
 };  // namespace etcdf::server::shared

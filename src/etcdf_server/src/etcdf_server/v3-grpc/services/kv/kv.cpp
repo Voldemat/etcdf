@@ -2,6 +2,8 @@
 
 #include <grpcpp/server_context.h>
 #include <grpcpp/support/status.h>
+#include <format>
+#include <iostream>
 
 #include "src/etcdf_protobuf/rpc.pb.h"
 
@@ -9,8 +11,13 @@ namespace etcdf::server::v3_grpc {
 ::grpc::Status GRPCKVService::Range(::grpc::ServerContext *context,
                                     const ::etcdserverpb::RangeRequest *request,
                                     ::etcdserverpb::RangeResponse *response) {
+    response->set_allocated_header(new etcdserverpb::ResponseHeader());
+    response->set_more(false);
+    response->set_count(0);
+    std::cout << std::format("Range. Key: {}", request->key()) << std::endl;
     return grpc::Status::OK;
 };
+
 ::grpc::Status GRPCKVService::Put(::grpc::ServerContext *context,
                                   const ::etcdserverpb::PutRequest *request,
                                   ::etcdserverpb::PutResponse *response) {

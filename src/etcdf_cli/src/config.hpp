@@ -9,4 +9,9 @@ extern const char *ETCDF_VERSION;
 extern const char *ETCDF_GIT_SHA;
 
 etcdf::server::shared::Config config_from_file(std::ifstream &file);
+
+enum class EndpointProtocol {
+    HTTP,
+    GRPC
+};
 };  // namespace etcdf::cli::config

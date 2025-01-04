@@ -6,43 +6,43 @@
 #include <sys/socket.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
+#include <yaml-cpp/node/type.h>
 #include <yaml-cpp/yaml.h>
 
 #include <cassert>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <ipaddress/errors.hpp>
 #include <ipaddress/ip-any-address.hpp>
 #include <ipaddress/ipv4-address.hpp>
 #include <ipaddress/ipv6-address.hpp>
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <url.hpp>
 #include <utility>
 #include <vector>
 
 #include "etcdf_server/shared/config.hpp"
 #include "shared-utils/addrinfo_iterator.hpp"
-#include "shared-utils/string_split.hpp"
-#include "shared-utils/transform_utils.hpp"
 
 namespace etcdf::cli::config {
 
-etcdf::server::shared::EtcdfProtocol schemeToProtocol(
-    const std::string &scheme) {
-    server::shared::EtcdfProtocol protocol;
-    if (scheme == "http") {
-        return server::shared::EtcdfProtocol::HTTP;
-    } else if (scheme == "grpc") {
-        return server::shared::EtcdfProtocol::GRPC;
+EndpointProtocol parseProtocol(const std::string &protocol) {
+    if (protocol == "http") {
+        return EndpointProtocol::HTTP;
+    } else if (protocol == "grpc") {
+        return EndpointProtocol::GRPC;
     } else {
         throw std::runtime_error(
-            "Only supported scheme values are \"http\" and \"grpc\"");
+            "Only supported protocol values are \"http\" and \"grpc\"");
     };
 };
 
@@ -107,47 +107,69 @@ etcdf::server::shared::Config config_from_file(std::ifstream &file) {
         throw std::runtime_error("Config must be a yaml map");
     };
     config.dataDirPath = node["data-dir"].as<std::string>();
-    const auto &advertisedClientUrls =
-        node["advertise-client-urls"].as<std::string>();
-    config.listeners.advertisedToClients =
-        split(advertisedClientUrls, ",") |
-        std::views::transform(transform_convert<Url>) |
+    if (!std::filesystem::exists(config.dataDirPath)) {
+        throw std::runtime_error("data-dir path does not exists");
+    };
+    if (!std::filesystem::is_directory(config.dataDirPath)) {
+        throw std::runtime_error("data-dir is not a directory");
+    };
+    for (const auto &n : node["tlsContexts"]) {
+    };
+    const auto &tlsContexts =
+        node["tlsContexts"] |
         std::views::transform(
-            [](const Url &url) -> server::shared::AdvertisedEndpoint {
-                return { .host = url.host(),
-                         .port = parsePort(url.port()),
-                         .protocol = schemeToProtocol(url.scheme()) };
+            [](const YAML::detail::iterator_value &n)
+                -> std::pair<std::string,
+                             std::shared_ptr<server::shared::TLSContext>> {
+                const auto &caPathNode = n.second["caPath"];
+                server::shared::TLSContext tlsContext = {
+                    .caPath = std::nullopt,
+                    .certPath = n.second["certPath"].as<std::string>(),
+                    .privateKeyPath =
+                        n.second["privateKeyPath"].as<std::string>()
+                };
+                if (caPathNode.Type() != YAML::NodeType::Undefined) {
+                    tlsContext.caPath = caPathNode.as<std::string>();
+                };
+                return { n.first.as<std::string>(),
+                         std::make_shared<server::shared::TLSContext>(
+                             tlsContext) };
+            }) |
+        std::ranges::to<std::unordered_map>();
+    const auto &parsedEndpoints =
+        node["endpoints"] |
+        std::views::transform(
+            [&tlsContexts](const YAML::Node &n)
+                -> std::pair<EndpointProtocol, server::shared::Endpoint> {
+                std::optional<std::shared_ptr<server::shared::TLSContext>>
+                    tlsContext;
+                const auto &tlsContextNode = n["tlsContext"];
+                if (tlsContextNode.Type() != YAML::NodeType::Undefined) {
+                    const auto &tlsContextName =
+                        tlsContextNode.as<std::string>();
+                    if (!tlsContexts.contains(tlsContextName)) {
+                        throw std::runtime_error(std::format(
+                            "tlsContext {} does not exist", tlsContextName));
+                    };
+                    tlsContext = tlsContexts.at(tlsContextName);
+                };
+                return { parseProtocol(n["protocol"].as<std::string>()),
+                         { .ipAddress = ipaddress::ip_address::parse(
+                               n["ipAddress"].as<std::string>()),
+                           .port = n["port"].as<unsigned int>(),
+                           .tlsContext = tlsContext } };
             }) |
         std::ranges::to<std::vector>();
-    const auto &clientUrls = node["listen-client-urls"].as<std::string>();
-
-    for (const auto &[protocol, endpoints] :
-         split(clientUrls, ",") |
-             std::views::transform(transform_convert<Url>) |
-             std::views::transform(
-                 [](const Url &url)
-                     -> std::pair<server::shared::EtcdfProtocol,
-                                  std::vector<server::shared::Endpoint>> {
-                     const auto &port = parsePort(url.port());
-                     const auto &endpoints =
-                         hostToIps(url.host()) |
-                         std::views::transform([&port](const auto &ip)
-                                                   -> server::shared::Endpoint {
-                             return { .ip_address = ip, .port = port.value() };
-                         }) |
-                         std::ranges::to<std::vector>();
-                     return { schemeToProtocol(url.scheme()), endpoints };
-                 })) {
-        switch (protocol) {
-            case server::shared::EtcdfProtocol::GRPC: {
-                config.listeners.clients.grpc.append_range(endpoints);
-                break;
-            }
-            case server::shared::EtcdfProtocol::HTTP: {
-                config.listeners.clients.http.append_range(endpoints);
-                break;
-            }
-        };
+    config.tlsContexts = tlsContexts;
+    config.endpoints = {
+        .http = parsedEndpoints | std::views::filter([](const auto &pair) {
+                    return pair.first == EndpointProtocol::HTTP;
+                }) |
+                std::views::values | std::ranges::to<std::vector>(),
+        .grpc = parsedEndpoints | std::views::filter([](const auto &pair) {
+                    return pair.first == EndpointProtocol::GRPC;
+                }) |
+                std::views::values | std::ranges::to<std::vector>(),
     };
     return config;
 };
