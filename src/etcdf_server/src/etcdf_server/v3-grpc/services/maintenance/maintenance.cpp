@@ -21,7 +21,7 @@ namespace etcdf::server::v3_grpc {
     ::grpc::ServerContext *context,
     const ::etcdserverpb::StatusRequest *request,
     ::etcdserverpb::StatusResponse *response) {
-    response->set_version("0.0.1");
+    response->set_version("3.0.1");
     response->set_dbsize(100);
     response->set_leader(1);
     response->set_raftterm(1);

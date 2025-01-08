@@ -3,11 +3,14 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/sync_stream.h>
+#include <string>
+#include <unordered_map>
 
 #include "src/etcdf_protobuf/rpc.grpc.pb.h"
 #include "src/etcdf_protobuf/rpc.pb.h"
 
 namespace etcdf::server::v3_grpc {
+extern std::unordered_map<std::string, std::string> store;
 class GRPCKVService final : public etcdserverpb::KV::Service {
     ::grpc::Status Range(::grpc::ServerContext *context,
                          const ::etcdserverpb::RangeRequest *request,

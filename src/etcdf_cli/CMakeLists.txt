@@ -32,6 +32,7 @@ add_executable(
     ${CONFIG_CPP_PATH}
 )
 set_property(TARGET etcdf PROPERTY CXX_STANDARD 23)
+target_link_options(etcdf PRIVATE -dead_strip)
 target_link_libraries(etcdf
     PRIVATE CLI11::CLI11
     PRIVATE etcdfserver

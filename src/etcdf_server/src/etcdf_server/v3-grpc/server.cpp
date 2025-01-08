@@ -10,15 +10,23 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/sync_stream.h>
 
+#include <algorithm>
+#include <format>
+#include <fstream>
 #include <iostream>
 #include <ipaddress/ip-address-base.hpp>
+#include <iterator>
 #include <memory>
+#include <sstream>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "./config_utils.hpp"
 #include "./logging_interceptor.hpp"
 #include "etcdf_server/shared/config.hpp"
+#include "etcdf_server/v3-grpc/base64.hpp"
 #include "etcdf_server/v3-grpc/services/auth/auth.hpp"
 #include "etcdf_server/v3-grpc/services/cluster/cluster.hpp"
 #include "etcdf_server/v3-grpc/services/kv/kv.hpp"
@@ -43,6 +51,22 @@ void start_grpcserver(const shared::Config &config) {
     builder.RegisterService(&maintenanceService);
     builder.RegisterService(&authService);
     builder.RegisterService(&clusterService);
+    {
+        std::ifstream dumpFile("./tmp/data3.txt");
+        std::string line;
+        while (std::getline(dumpFile, line)) {
+            std::stringstream ss(line);
+            std::string key;
+            std::getline(ss, key, ':');
+            std::string value;
+            std::getline(ss, value, ':');
+            const auto& parsedKeyBytes = base64_decode(key);
+            const auto& parsedValueBytes = base64_decode(value);
+            std::string parsedKey(parsedKeyBytes.begin(), parsedKeyBytes.end());
+            std::string parsedValue(parsedValueBytes.begin(), parsedValueBytes.end());
+            store[parsedKey] = parsedValue;
+        }
+    }
     for (const auto &listener :
          std::views::concat(config.endpoints.grpc, config.endpoints.http)) {
         const auto &listenAddr = listenAddrFromEndpoint(listener);

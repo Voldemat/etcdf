@@ -19,7 +19,7 @@ protobuf_generate(
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
     PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}"
 )
-target_compile_options(etcdfproto PRIVATE -fclang-abi-compat=17)
+target_compile_options(etcdfproto PUBLIC -fclang-abi-compat=17)
 
 file(GLOB_RECURSE ETCDF_SERVER_HEADERS src/*.hpp src/*.h)
 file(GLOB_RECURSE ETCDF_SERVER_SOURCES src/*.cpp src/*.c)
@@ -33,7 +33,7 @@ set_property(TARGET etcdfserver PROPERTY CXX_STANDARD 23)
 target_link_libraries(
     etcdfserver
     PUBLIC ipaddress::ipaddress
-    PRIVATE etcdfproto drogon jsoncpp_static etcdf_utils
+    PRIVATE etcdfproto drogon jsoncpp_static etcdf_utils magic_enum::magic_enum
 )
 target_include_directories(
     etcdfserver
@@ -44,5 +44,6 @@ target_include_directories(
     SYSTEM
     PRIVATE $<TARGET_PROPERTY:drogon,INTERFACE_INCLUDE_DIRECTORIES>
     PRIVATE $<TARGET_PROPERTY:jsoncpp_static,INTERFACE_INCLUDE_DIRECTORIES>
+    PRIVATE $<TARGET_PROPERTY:magic_enum::magic_enum,INTERFACE_INCLUDE_DIRECTORIES>
     PUBLIC $<TARGET_PROPERTY:ipaddress::ipaddress,INTERFACE_INCLUDE_DIRECTORIES>
 )
