@@ -10,12 +10,10 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/sync_stream.h>
 
-#include <algorithm>
-#include <format>
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <ipaddress/ip-address-base.hpp>
-#include <iterator>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -26,7 +24,9 @@
 #include "./config_utils.hpp"
 #include "./logging_interceptor.hpp"
 #include "etcdf_server/shared/config.hpp"
+#include "etcdf_server/shared/server_handle.hpp"
 #include "etcdf_server/v3-grpc/base64.hpp"
+#include "etcdf_server/v3-grpc/grpc_server_handle.hpp"
 #include "etcdf_server/v3-grpc/services/auth/auth.hpp"
 #include "etcdf_server/v3-grpc/services/cluster/cluster.hpp"
 #include "etcdf_server/v3-grpc/services/kv/kv.hpp"
@@ -37,7 +37,8 @@
 
 namespace etcdf::server::v3_grpc {
 
-void start_grpcserver(const shared::Config &config) {
+std::unique_ptr<shared::ServerHandle> create_grpcserver(
+    const shared::Config &config) {
     GRPCKVService kvService;
     GRPCWatchService watchService;
     GRPCLeaseService leaseService;
@@ -60,11 +61,15 @@ void start_grpcserver(const shared::Config &config) {
             std::getline(ss, key, ':');
             std::string value;
             std::getline(ss, value, ':');
-            const auto& parsedKeyBytes = base64_decode(key);
-            const auto& parsedValueBytes = base64_decode(value);
+            const auto &parsedKeyBytes = base64_decode(key);
+            const auto &parsedValueBytes = base64_decode(value);
             std::string parsedKey(parsedKeyBytes.begin(), parsedKeyBytes.end());
-            std::string parsedValue(parsedValueBytes.begin(), parsedValueBytes.end());
-            store[parsedKey] = parsedValue;
+            std::string parsedValue(parsedValueBytes.begin(),
+                                    parsedValueBytes.end());
+            store[parsedKey] = {
+                .revision = 1,
+                .payload = parsedValue,
+            };
         }
     }
     for (const auto &listener :
@@ -77,7 +82,6 @@ void start_grpcserver(const shared::Config &config) {
     std::vector<GRPCFactory> factories;
     factories.push_back(std::make_unique<LoggingInterceptorFactory>());
     builder.experimental().SetInterceptorCreators(std::move(factories));
-    const auto &server = builder.BuildAndStart();
-    server->Wait();
+    return std::make_unique<GRPCServerHandle>(builder.BuildAndStart());
 };
 };  // namespace etcdf::server::v3_grpc

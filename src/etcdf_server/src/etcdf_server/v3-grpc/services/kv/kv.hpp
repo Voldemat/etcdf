@@ -10,7 +10,11 @@
 #include "src/etcdf_protobuf/rpc.pb.h"
 
 namespace etcdf::server::v3_grpc {
-extern std::unordered_map<std::string, std::string> store;
+struct StoreValue {
+    unsigned int revision;
+    std::string payload;
+};
+extern std::unordered_map<std::string, StoreValue> store;
 class GRPCKVService final : public etcdserverpb::KV::Service {
     ::grpc::Status Range(::grpc::ServerContext *context,
                          const ::etcdserverpb::RangeRequest *request,

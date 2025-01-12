@@ -1,7 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include "etcdf_server/shared/config.hpp"
+#include "etcdf_server/shared/server_handle.hpp"
 
 namespace etcdf::server::v3_grpc {
-void start_grpcserver(const shared::Config& config);
+std::unique_ptr<shared::ServerHandle> create_grpcserver(
+    const shared::Config &config);
 };

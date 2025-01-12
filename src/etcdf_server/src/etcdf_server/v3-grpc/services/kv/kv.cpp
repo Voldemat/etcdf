@@ -23,7 +23,8 @@ bool calc_left(const std::string &left, const std::string &key) {
 bool calc_right(const std::string &right, const std::string &key) {
     return std::memcmp(right.data(), key.data(), key.size()) > 0;
 };
-std::unordered_map<std::string, std::string> store;
+
+std::unordered_map<std::string, StoreValue> store;
 
 ::grpc::Status GRPCKVService::Range(::grpc::ServerContext *context,
                                     const ::etcdserverpb::RangeRequest *request,
@@ -47,9 +48,10 @@ std::unordered_map<std::string, std::string> store;
             response->set_count(1);
             const auto &keyValue = response->add_kvs();
             keyValue->set_key(startKey);
-            keyValue->set_value(store.at(startKey));
-            keyValue->set_version(3);
-            keyValue->set_mod_revision(2);
+            const auto &value = store.at(startKey);
+            keyValue->set_value(value.payload);
+            keyValue->set_version(1);
+            keyValue->set_mod_revision(1);
             keyValue->set_create_revision(1);
         };
     } else {
@@ -61,12 +63,14 @@ std::unordered_map<std::string, std::string> store;
                 count++;
                 const auto &keyValue = response->add_kvs();
                 keyValue->set_key(key);
-                if (!request->keys_only()) {
-                    keyValue->set_value(store.at(key));
-                };
-                keyValue->set_version(3);
-                keyValue->set_mod_revision(2);
+                keyValue->set_version(1);
+                keyValue->set_mod_revision(1);
                 keyValue->set_create_revision(1);
+                if (!request->keys_only()) {
+                    const auto& value = store.at(key);
+                    keyValue->set_value(value.payload);
+                    keyValue->set_version(value.revision);
+                };
             };
         };
         response->set_count(count);
@@ -77,19 +81,28 @@ std::unordered_map<std::string, std::string> store;
 ::grpc::Status GRPCKVService::Put(::grpc::ServerContext *context,
                                   const ::etcdserverpb::PutRequest *request,
                                   ::etcdserverpb::PutResponse *response) {
-    store[request->key()] = request->value();
-    std::cout << std::format("Put. Key: {}, Value: {}, PrevKv: {}",
-                             request->key(), request->value(),
-                             request->prev_kv())
-              << std::endl;
+    const auto &header = new etcdserverpb::ResponseHeader();
+    header->set_revision(1);
+    header->set_member_id(1);
+    header->set_raft_term(1);
+    header->set_cluster_id(1);
+    response->set_allocated_header(header);
+    unsigned int revision = 1;
+    if (store.contains(request->key())) {
+        revision = store[request->key()].revision + 1;
+    };
+    store[request->key()] = { .revision = revision,
+                              .payload = request->value() };
+    std::cout << std::format("Put. Key: {}", request->key()) << std::endl;
     return grpc::Status::OK;
 };
+
 ::grpc::Status GRPCKVService::DeleteRange(
     ::grpc::ServerContext *context,
     const ::etcdserverpb::DeleteRangeRequest *request,
     ::etcdserverpb::DeleteRangeResponse *response) {
-    const auto &endKey = request->range_end();
     const auto &startKey = request->key();
+    const auto &endKey = request->range_end();
     std::cout << std::format(
                      "DeleteRange. startKey: {}, endKey: {}, prevKv: {}",
                      startKey, endKey, request->prev_kv())
@@ -111,9 +124,11 @@ std::unordered_map<std::string, std::string> store;
     };
     return grpc::Status::OK;
 };
+
 ::grpc::Status GRPCKVService::Txn(::grpc::ServerContext *context,
                                   const ::etcdserverpb::TxnRequest *request,
                                   ::etcdserverpb::TxnResponse *response) {
+    bool succeeded = true;
     for (const auto &compare : request->compare()) {
         std::cout << std::format(
                          "Compare. Key: {}, Value: {}, Result: {}, Target: {}",
@@ -121,9 +136,22 @@ std::unordered_map<std::string, std::string> store;
                          magic_enum::enum_name(compare.result()),
                          magic_enum::enum_name(compare.target()))
                   << std::endl;
+        if (compare.has_mod_revision()) {
+            const auto& mod_revision = compare.mod_revision();
+            std::cout << "compare has mod revision: " << mod_revision << std::endl;
+            if (store.contains(compare.key())) {
+                succeeded = store[compare.key()].revision == mod_revision;
+                std::cout << "compare result: " << succeeded << std::endl;
+            } else {
+                succeeded = false;
+                std::cout << "compare result: false" << std::endl;
+            };
+        };
     };
-    response->set_succeeded(true);
-    for (const auto &success : request->success()) {
+    std::cout << std::format("Txn succeeded: {}", succeeded) << std::endl;
+    response->set_succeeded(succeeded);
+    const auto& ops = succeeded ? request->success() : request->failure();
+    for (const auto &success : ops) {
         switch (success.request_case()) {
             case etcdserverpb::RequestOp::RequestCase::kRequestPut: {
                 const auto &op = success.request_put();
@@ -167,6 +195,7 @@ std::unordered_map<std::string, std::string> store;
     };
     return grpc::Status::OK;
 };
+
 ::grpc::Status GRPCKVService::Compact(
     ::grpc::ServerContext *context,
     const ::etcdserverpb::CompactionRequest *request,
