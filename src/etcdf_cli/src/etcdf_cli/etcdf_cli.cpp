@@ -4,6 +4,7 @@
 #include <CLI/Error.hpp>
 #include <CLI/Option.hpp>
 #include <CLI/Validators.hpp>
+#include <csignal>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -15,8 +16,15 @@
 
 #include "config.hpp"
 #include "etcdf_server/launcher/launcher.hpp"
+#include "etcdf_server/shared/state.hpp"
 
 namespace etcdf::cli {
+etcdf::server::shared::State state;
+
+void signal_handler(int) {
+    state.initialize_shutdown();
+};
+
 std::unique_ptr<CLI::App> createCLIApp() noexcept {
     std::unique_ptr<CLI::App> app = std::make_unique<CLI::App>("Etcdf");
     auto config_file_option = std::make_shared<std::string>();
@@ -37,7 +45,8 @@ std::unique_ptr<CLI::App> createCLIApp() noexcept {
             };
             std::ifstream config_file(config_filepath);
             const auto &server_config = config::config_from_file(config_file);
-            etcdf::server::launcher::start_both_servers(server_config);
+            std::signal(SIGINT, signal_handler);
+            etcdf::server::launcher::start_both_servers(server_config, state);
         } catch (const std::runtime_error &error) {
             std::cerr << error.what() << std::endl;
             throw CLI::RuntimeError(1);

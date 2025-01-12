@@ -6,6 +6,6 @@
 #include "etcdf_server/shared/server_handle.hpp"
 
 namespace etcdf::server::v3_grpc {
-std::unique_ptr<shared::ServerHandle> create_grpcserver(
+std::shared_ptr<shared::ServerHandle> create_grpcserver(
     const shared::Config &config);
 };

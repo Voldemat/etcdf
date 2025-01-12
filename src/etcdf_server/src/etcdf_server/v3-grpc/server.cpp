@@ -37,7 +37,7 @@
 
 namespace etcdf::server::v3_grpc {
 
-std::unique_ptr<shared::ServerHandle> create_grpcserver(
+std::shared_ptr<shared::ServerHandle> create_grpcserver(
     const shared::Config &config) {
     GRPCKVService kvService;
     GRPCWatchService watchService;
@@ -82,6 +82,6 @@ std::unique_ptr<shared::ServerHandle> create_grpcserver(
     std::vector<GRPCFactory> factories;
     factories.push_back(std::make_unique<LoggingInterceptorFactory>());
     builder.experimental().SetInterceptorCreators(std::move(factories));
-    return std::make_unique<GRPCServerHandle>(builder.BuildAndStart());
+    return std::make_shared<GRPCServerHandle>(builder.BuildAndStart());
 };
 };  // namespace etcdf::server::v3_grpc
