@@ -1,13 +1,21 @@
 #include "./grpc_server_handle.hpp"
 
 #include <grpcpp/server.h>
+#include <grpcpp/server_builder.h>
 
 #include <memory>
-#include <utility>
 
 namespace etcdf::server::v3_grpc {
-GRPCServerHandle::GRPCServerHandle(std::unique_ptr<grpc::Server> &&grpcServer)
-    : grpcServer{ std::move(grpcServer) } {};
-void GRPCServerHandle::run() { grpcServer->Wait(); };
-void GRPCServerHandle::stop() { grpcServer->Shutdown(); };
+GRPCServerHandle::GRPCServerHandle() {
+    builder = std::make_unique<grpc::ServerBuilder>();
+};
+void GRPCServerHandle::run() {
+    runningServer = builder->BuildAndStart();
+    runningServer.value()->Wait();
+};
+void GRPCServerHandle::stop() {
+    if (runningServer.has_value()) {
+        runningServer.value()->Shutdown();
+    };
+};
 };  // namespace etcdf::server::v3_grpc

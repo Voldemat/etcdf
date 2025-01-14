@@ -27,31 +27,25 @@
 #include "etcdf_server/shared/server_handle.hpp"
 #include "etcdf_server/v3-grpc/base64.hpp"
 #include "etcdf_server/v3-grpc/grpc_server_handle.hpp"
-#include "etcdf_server/v3-grpc/services/auth/auth.hpp"
-#include "etcdf_server/v3-grpc/services/cluster/cluster.hpp"
 #include "etcdf_server/v3-grpc/services/kv/kv.hpp"
-#include "etcdf_server/v3-grpc/services/lease/lease.hpp"
-#include "etcdf_server/v3-grpc/services/maintenance/maintenance.hpp"
-#include "etcdf_server/v3-grpc/services/watch/watch.hpp"
 #include "libcxx-polyfills/concat_views.hpp"
 
 namespace etcdf::server::v3_grpc {
 
 std::shared_ptr<shared::ServerHandle> create_grpcserver(
     const shared::Config &config) {
-    GRPCKVService kvService;
-    GRPCWatchService watchService;
-    GRPCLeaseService leaseService;
-    GRPCMaintenanceService maintenanceService;
-    GRPCAuthService authService;
-    GRPCClusterService clusterService;
-    grpc::ServerBuilder builder;
-    builder.RegisterService(&kvService);
-    builder.RegisterService(&watchService);
-    builder.RegisterService(&leaseService);
-    builder.RegisterService(&maintenanceService);
-    builder.RegisterService(&authService);
-    builder.RegisterService(&clusterService);
+    const auto &handle = std::make_shared<GRPCServerHandle>();
+    grpc::ServerBuilder* builder = handle->builder.get();
+    auto &services = handle->servicesContainer;
+    grpc::ServerBuilder check;
+    grpc::ServerBuilder* pointer = &check;
+    pointer->RegisterService(&services.kvService);
+    builder->RegisterService(&services.kvService);
+    builder->RegisterService(&services.watchService);
+    builder->RegisterService(&services.leaseService);
+    builder->RegisterService(&services.maintenanceService);
+    builder->RegisterService(&services.authService);
+    builder->RegisterService(&services.clusterService);
     {
         std::ifstream dumpFile("./tmp/data3.txt");
         std::string line;
@@ -76,12 +70,12 @@ std::shared_ptr<shared::ServerHandle> create_grpcserver(
          std::views::concat(config.endpoints.grpc, config.endpoints.http)) {
         const auto &listenAddr = listenAddrFromEndpoint(listener);
         const auto &creds = mapTLSContextToGrpcCreds(listener.tlsContext);
-        builder.AddListeningPort(listenAddr, creds);
+        builder->AddListeningPort(listenAddr, creds);
         std::cout << "Server listening on: " << listenAddr << std::endl;
     };
     std::vector<GRPCFactory> factories;
     factories.push_back(std::make_unique<LoggingInterceptorFactory>());
-    builder.experimental().SetInterceptorCreators(std::move(factories));
-    return std::make_shared<GRPCServerHandle>(builder.BuildAndStart());
+    builder->experimental().SetInterceptorCreators(std::move(factories));
+    return handle;
 };
 };  // namespace etcdf::server::v3_grpc

@@ -1,18 +1,22 @@
 #pragma once
 
-#include <grpcpp/server.h>
+#include <grpcpp/server_builder.h>
 
 #include <memory>
+#include <optional>
 
+#include "./services/container.hpp"
 #include "etcdf_server/shared/server_handle.hpp"
 
 namespace etcdf::server::v3_grpc {
 class GRPCServerHandle : public shared::ServerHandle {
 private:
-    std::unique_ptr<grpc::Server> grpcServer;
+    std::optional<std::unique_ptr<grpc::Server>> runningServer;
 
 public:
-    explicit GRPCServerHandle(std::unique_ptr<grpc::Server> &&grpcServer);
+    ServicesContainer servicesContainer;
+    std::unique_ptr<grpc::ServerBuilder> builder;
+    explicit GRPCServerHandle();
     void run() override;
     void stop() override;
 };
